@@ -1,0 +1,108 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mortgage_db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: mortgage
+      MYSQL_USER: mortgage
+      MYSQL_PASSWORD: mortgage
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  localstack:
+    image: localstack/localstack:latest
+    container_name: mortgage_localstack
+    ports:
+      - "4566:4566"
+      - "4571:4571"
+    environment:
+      SERVICES: sqs,sns
+      DEBUG: 1
+      DATA_DIR: /tmp/localstack/data
+      LAMBDA_EXECUTOR: docker
+      DOCKER_HOST: unix:///var/run/docker.sock
+    volumes:
+      - localstack_data:/tmp/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./localstack-init.sh:/docker-entrypoint-initdb.d/init.sh
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: ./auth-service/Dockerfile
+    container_name: auth_service
+    ports:
+      - "3001:3001"
+    environment:
+      DB_HOST: mysql
+      DB_USER: mortgage
+      DB_PASSWORD: mortgage
+      DB_NAME: mortgage
+      JWT_SECRET: your-secret-key-change-in-production
+      NODE_ENV: development
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./auth-service:/app
+      - ./common:/app/common
+      - /app/node_modules
+    working_dir: /app
+
+  loan-service:
+    build:
+      context: .
+      dockerfile: ./loan-service/Dockerfile
+    container_name: loan_service
+    ports:
+      - "3002:3002"
+    environment:
+      DB_HOST: mysql
+      DB_USER: mortgage
+      DB_PASSWORD: mortgage
+      DB_NAME: mortgage
+      JWT_SECRET: your-secret-key-change-in-production
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      SQS_ENDPOINT: http://localstack:4566
+      DOC_VERIFICATION_QUEUE_URL: http://localstack:4566/000000000000/doc-verification-queue
+      NODE_ENV: development
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  doc-verification-service:
+    build:
+      context: .
+      dockerfile: ./doc-verification-service/Dockerfile
+    container_name: doc_verification_service
+    ports:
+      - "3003:3003"
+    environment:
+      DB_HOST: mysql
+      DB_USER: mortgage
+      DB_PASSWORD: mortgage
+      DB_NAME: mortgage
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      SQS_ENDPOINT: http://localstack:4566
+      DOC_VERIFICATION_QUEUE_URL: http://localstack:4566/000000000000/doc-verification-queue
+      ELIGIBILITY_QUEUE_URL: http://localstack:4566/000000000000/eligibility-queue
+      NODE_ENV: development
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
+  localstack_data:

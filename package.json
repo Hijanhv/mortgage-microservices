@@ -1,0 +1,17 @@
+{
+  "name": "mortgage-microservices",
+  "version": "1.0.0",
+  "description": "Mortgage microservices architecture",
+  "main": "index.js",
+  "scripts": {
+    "dev": "docker-compose up",
+    "down": "docker-compose down",
+    "logs": "docker-compose logs -f",
+    "build": "docker-compose build",
+    "install-all": "npm install && cd auth-service && npm install && cd ../loan-service && npm install && cd ../doc-verification-service && npm install && cd ../eligibility-lambda && npm install",
+    "db:init": "docker exec mortgage_db mysql -u mortgage -pmortgage mortgage < sql-scripts/01-init.sql"
+  },
+  "keywords": [],
+  "author": "Janhavi Chavada",
+  "license": "MIT"
+}

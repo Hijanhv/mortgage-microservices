@@ -1,0 +1,16 @@
+{
+  "name": "eligibility-lambda",
+  "version": "1.0.0",
+  "description": "Eligibility calculation Lambda function for mortgage microservices",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1484.0",
+    "mysql2": "^3.6.5"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
